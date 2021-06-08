@@ -1,10 +1,15 @@
 import os
+import numpy as np
 
-from flask import Flask, request
+from flask import Flask, request, abort
+from flask_cors import CORS, cross_origin
+
 from ModelManager import ModelManager
 
 app = Flask(__name__)
-models_config_ = None
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+models_config_ = {}
 
 
 def generate_models_from_csv():
@@ -37,13 +42,19 @@ def prepare_models():
     print("Training models...")
     train_models(models_config_)
     print("DONE training models... ")
-    print(models_config_)
 
 
 @app.route('/predict')
 def get_prediction():
-    # print(request.args.get("drug"), request.args.get("timestamp"))
-    return request.args
+    print(request.args)
+    if "drug" in request.args and "timestamp" in request.args:
+        drug_name = request.args.get("drug")
+        timestamp = request.args.get("timestamp")
+        if drug_name + ".csv" in models_config_:
+            return str(models_config_.get(drug_name + ".csv").get_prediction(np.array(timestamp).reshape(-1, 1)))
+        return "No data"
+    else:
+        abort(400, 'Invalid url format, provide valid drug name and timestamp')
 
 
 if __name__ == '__main__':
